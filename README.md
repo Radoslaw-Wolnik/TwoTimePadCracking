@@ -32,7 +32,7 @@ test/
 ├── test_decryptor.cpp
 └── main_test.cpp
 CMakeLists.txt
-viterbi_kernel.cl
+kernels/viterbi_kernel.cl
 README.md
 ```
 
