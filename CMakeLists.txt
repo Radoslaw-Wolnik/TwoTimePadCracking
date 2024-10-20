@@ -5,32 +5,96 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(ExternalProject)
+
 # Options
 option(BUILD_TESTS "Build the tests" ON)
 option(USE_GPU "Enable GPU acceleration" OFF)
 
-# Find required packages
-find_package(Threads REQUIRED)
-find_package(Boost REQUIRED COMPONENTS graph)
-find_package(yaml-cpp REQUIRED)
-find_package(cxxopts REQUIRED)
-find_package(OpenCL REQUIRED)
-find_package(GTest REQUIRED)
+# Boost
+find_package(Boost 1.71 COMPONENTS graph)
+if(NOT Boost_FOUND)
+    ExternalProject_Add(
+        boost
+        URL https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ""
+    )
+    ExternalProject_Get_Property(boost SOURCE_DIR)
+    set(BOOST_ROOT ${SOURCE_DIR})
+    set(Boost_INCLUDE_DIRS ${BOOST_ROOT})
+    set(Boost_LIBRARY_DIRS ${BOOST_ROOT}/stage/lib)
+endif()
 
-# Add include directories
-include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${Boost_INCLUDE_DIRS})
+# yaml-cpp
+find_package(yaml-cpp QUIET)
+if(NOT yaml-cpp_FOUND)
+    ExternalProject_Add(
+        yaml-cpp
+        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+        GIT_TAG yaml-cpp-0.7.0
+        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+    )
+    ExternalProject_Get_Property(yaml-cpp INSTALL_DIR)
+    set(YAML_CPP_INCLUDE_DIR ${INSTALL_DIR}/include)
+    set(YAML_CPP_LIBRARIES ${INSTALL_DIR}/lib/libyaml-cpp.a)
+endif()
+
+# cxxopts
+ExternalProject_Add(
+    cxxopts
+    GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
+    GIT_TAG v2.2.1
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+)
+ExternalProject_Get_Property(cxxopts INSTALL_DIR)
+set(CXXOPTS_INCLUDE_DIR ${INSTALL_DIR}/include)
+
+# spdlog
+ExternalProject_Add(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.9.2
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+)
+ExternalProject_Get_Property(spdlog INSTALL_DIR)
+set(SPDLOG_INCLUDE_DIR ${INSTALL_DIR}/include)
+set(SPDLOG_LIBRARIES ${INSTALL_DIR}/lib/libspdlog.a)
+
+# OpenCL
+find_package(OpenCL REQUIRED)
+
+# Threads
+find_package(Threads REQUIRED)
+
+# GTest (for tests)
+if(BUILD_TESTS)
+    find_package(GTest REQUIRED)
+endif()
+
+# Include directories
+include_directories(
+    ${PROJECT_SOURCE_DIR}/include
+    ${Boost_INCLUDE_DIRS}
+    ${YAML_CPP_INCLUDE_DIR}
+    ${CXXOPTS_INCLUDE_DIR}
+    ${SPDLOG_INCLUDE_DIR}
+    ${OpenCL_INCLUDE_DIRS}
+)
 
 # Add source files
 set(SOURCES
+    src/main.cpp
     src/config_manager.cpp
     src/decryptor.cpp
     src/gpu_accelerator.cpp
-    src/language_model.cpp
-    src/visualizer.cpp
     src/viterbi_search.cpp
+    src/viterbi_visualizer.cpp
+    src/language_model.cpp
+    src/model_analyzer.cpp
+    src/visualizer.cpp
     src/logger.cpp
-    src/main.cpp
 )
 
 # Create executable
@@ -39,12 +103,15 @@ add_executable(two_time_pad_cracker ${SOURCES})
 # Link libraries
 target_link_libraries(two_time_pad_cracker
     PRIVATE
+    ${Boost_LIBRARIES}
+    ${YAML_CPP_LIBRARIES}
+    ${SPDLOG_LIBRARIES}
+    ${OpenCL_LIBRARIES}
     Threads::Threads
-    Boost::graph
-    yaml-cpp
-    cxxopts::cxxopts
-    OpenCL::OpenCL
 )
+
+# Add dependencies
+add_dependencies(two_time_pad_cracker boost yaml-cpp cxxopts spdlog)
 
 if(USE_GPU)
     target_compile_definitions(two_time_pad_cracker PRIVATE USE_GPU)
@@ -56,6 +123,25 @@ if(MSVC)
 else()
     target_compile_options(two_time_pad_cracker PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
+
+# Copy OpenCL kernel file
+configure_file(${CMAKE_SOURCE_DIR}/src/viterbi_kernel.cl
+               ${CMAKE_BINARY_DIR}/viterbi_kernel.cl COPYONLY)
+
+# Set include directories for target
+target_include_directories(two_time_pad_cracker PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${Boost_INCLUDE_DIRS}
+    ${YAML_CPP_INCLUDE_DIR}
+    ${CXXOPTS_INCLUDE_DIR}
+    ${SPDLOG_INCLUDE_DIR}
+    ${OpenCL_INCLUDE_DIRS}
+)
+
+# Set output directory
+set_target_properties(two_time_pad_cracker PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
 
 # Tests
 if(BUILD_TESTS)
@@ -73,15 +159,21 @@ if(BUILD_TESTS)
         PRIVATE
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/test/include
+        ${Boost_INCLUDE_DIRS}
+        ${YAML_CPP_INCLUDE_DIR}
+        ${CXXOPTS_INCLUDE_DIR}
+        ${SPDLOG_INCLUDE_DIR}
+        ${OpenCL_INCLUDE_DIRS}
     )
     target_link_libraries(unit_tests
         PRIVATE
         GTest::GTest
         GTest::Main
+        ${Boost_LIBRARIES}
+        ${YAML_CPP_LIBRARIES}
+        ${SPDLOG_LIBRARIES}
+        ${OpenCL_LIBRARIES}
         Threads::Threads
-        Boost::graph
-        yaml-cpp
-        OpenCL::OpenCL
     )
     add_test(NAME unit_tests COMMAND unit_tests)
 endif()
