@@ -59,17 +59,22 @@ else()
     target_compile_options(two_time_pad_cracker PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endif()
 
-configure_file(${CMAKE_SOURCE_DIR}/kernels/viterbi_kernel.cl
-               ${CMAKE_BINARY_DIR}/kernels/viterbi_kernel.cl COPYONLY)
-
 # Tests
 if(BUILD_TESTS)
     enable_testing()
     add_executable(unit_tests
-        test/test_language_model.cpp
-        test/test_viterbi_search.cpp
-        test/test_decryptor.cpp
-        test/main_test.cpp
+        test/src/main_test.cpp
+        test/src/test_language_model.cpp
+        test/src/test_viterbi_search.cpp
+        test/src/test_decryptor.cpp
+        test/src/test_config_manager.cpp
+        test/src/test_gpu_accelerator.cpp
+        test/src/test_visualizer.cpp
+    )
+    target_include_directories(unit_tests
+        PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/test/include
     )
     target_link_libraries(unit_tests
         PRIVATE

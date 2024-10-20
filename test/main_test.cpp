@@ -2,12 +2,12 @@
 #include <gtest/gtest.h>
 
 // Include headers for new test files
-#include "test_config_manager.h"
-#include "test_decryptor.h"
-#include "test_gpu_accelerator.h"
-#include "test_language_model.h"
-#include "test_visualizer.h"
-#include "test_viterbi_search.h"
+#include "include/test_config_manager.h"
+#include "include/test_decryptor.h"
+#include "include/test_gpu_accelerator.h"
+#include "include/test_language_model.h"
+#include "include/test_visualizer.h"
+#include "include/test_viterbi_search.h"
 
 
 int main(int argc, char **argv) {
