@@ -14,26 +14,50 @@ This project implements the method described in the paper "A Natural Language Ap
 ## Project Structure
 
 ```
-src/
-├── language_model.h/cpp
-├── viterbi_search.h/cpp
-├── decryptor.h/cpp
-├── visualizer.h/cpp
-├── viterbi_visualizer.h/cpp
-├── model_analyzer.h/cpp
-├── gpu_accelerator.h/cpp
-├── config_manager.h/cpp
-├── logger.h/cpp
-├── main.cpp
-└── utils.h/cpp
-test/
-├── test_language_model.cpp
-├── test_viterbi_search.cpp
-├── test_decryptor.cpp
-└── main_test.cpp
-CMakeLists.txt
-kernels/viterbi_kernel.cl
-README.md
+project_root/
+├── include/
+│   ├── config_manager.h
+│   ├── decryptor.h
+│   ├── gpu_accelerator.h
+│   ├── language_model.h
+│   ├── logger.h
+│   ├── model_analyzer.h
+│   ├── visualizer.h
+│   ├── viterbi_search.h
+│   └── viterbi_visualizer.h
+├── src/
+│   ├── config_manager.cpp
+│   ├── decryptor.cpp
+│   ├── gpu_accelerator.cpp
+│   ├── language_model.cpp
+│   ├── logger.cpp
+│   ├── main.cpp
+│   ├── model_analyzer.cpp
+│   ├── visualizer.cpp
+│   ├── viterbi_search.cpp
+│   └── viterbi_visualizer.cpp
+├── test/
+│   ├── include/
+│   │   ├── test_config_manager.h
+│   │   ├── test_decryptor.h
+│   │   ├── test_gpu_accelerator.h
+│   │   ├── test_language_model.h
+│   │   ├── test_visualizer.h
+│   │   └── test_viterbi_search.h
+│   ├── src/
+│   │   ├── test_config_manager.cpp
+│   │   ├── test_decryptor.cpp
+│   │   ├── test_gpu_accelerator.cpp
+│   │   ├── test_language_model.cpp
+│   │   ├── test_visualizer.cpp
+│   │   └── test_viterbi_search.cpp
+│   └── main_test.cpp
+├── config/
+│   └── config.yml
+├── kernels/
+│   └── viterbi_kernel.cl
+├── CMakeLists.txt
+└── README.md
 ```
 
 ## Key Features
@@ -60,11 +84,11 @@ README.md
    ```
 5. Build the project:
    ```
-   make
+   cmake --build .
    ```
 6. Run the program:
    ```
-   ./two_time_pad_cracker -c path/to/config.yaml -x path/to/xored_text.txt
+   ./bin/two_time_pad_cracker -c ../config/config.yml -x path/to/xored_text.txt
    ```
 
 ## Dependencies
@@ -73,6 +97,8 @@ README.md
 - CMake 3.15+
 - Boost (for graph visualization)
 - yaml-cpp (for configuration management)
+- cxxopts (for command-line argument parsing)
+- spdlog (for logging)
 - OpenCL (for GPU acceleration, optional)
 - GTest (for unit testing)
 
@@ -92,10 +118,8 @@ use_gpu: false
 ## Usage
 
 ```
-two_time_pad_cracker --config path/to/config.yaml --xor path/to/xored_text.txt
+two_time_pad_cracker --config path/to/config.yml --xor path/to/xored_text.txt
 ```
-
-
 
 Use `--help` for more information on available options.
 
@@ -103,10 +127,19 @@ Use `--help` for more information on available options.
 
 The project includes unit tests using the Google Test framework. To run the tests:
 
-```
-cd build
-make test
-```
+1. Make sure you've built the project with the `BUILD_TESTS` option enabled:
+   ```
+   cmake -DBUILD_TESTS=ON ..
+   cmake --build .
+   ```
+2. Run the tests:
+   ```
+   ctest
+   ```
+   or run the test executable directly:
+   ```
+   ./bin/unit_tests
+   ```
 
 ## Performance
 
@@ -117,6 +150,10 @@ The implementation includes several optimizations:
 
 On a typical modern PC, the program can process ciphertexts at approximately 200ms per byte.
 
+## Contributing
 
+Contributions are welcome! Please feel free to submit a Pull Request.
 
+## License
 
+This project is licensed under the MIT License - see the LICENSE file for details.
