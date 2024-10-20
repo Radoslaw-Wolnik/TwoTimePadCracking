@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        ".fantomasignore": "ignore",
         "algorithm": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
@@ -68,6 +69,7 @@
         "stop_token": "cpp",
         "thread": "cpp",
         "xlocbuf": "cpp",
-        "xlocmes": "cpp"
+        "xlocmes": "cpp",
+        "filesystem": "cpp"
     }
 }
