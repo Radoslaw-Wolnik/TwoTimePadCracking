@@ -1,9 +1,0 @@
-model_file1: "path/to/model1.bin"
-model_file2: "path/to/model2.bin"
-pruning_threshold: 1e-5
-verbose_mode: true
-use_gpu: false
-max_threads: 4
-output_directory: "output"
-enable_viterbi_visualization: false
-viterbi_visualization_file: "viterbi_graph.dot"
