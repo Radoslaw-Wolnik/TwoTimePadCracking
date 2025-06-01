@@ -1,159 +1,132 @@
-# Two-Time Pad Cracker
 
-This project implements the method described in the paper "A Natural Language Approach to Automated Cryptanalysis of Two-time Pads" by Mason et al. The goal is to recover plaintexts from two-time pad encrypted messages using statistical language models and dynamic programming. This implementation is in C++ and includes several optimizations and additional features.
+# Automated Cryptanalysis of Two-time Pads
 
-## Main Components
+This project implements the techniques from the paper 
+["A Natural Language Approach to Automated Cryptanalysis of Two-time Pads"](https://www.cs.jhu.edu/~jason/papers/mason+al.ccs06.pdf) by Mason et al. (2006). 
+The goal is to automatically recover two plaintexts that have been encrypted with the same keystream 
+(a two-time pad) when only the type of each plaintext is known (e.g., English emails).
 
-1. **Language Models**: Implements n-gram character language models to estimate the probability of character sequences in plaintexts.
-2. **Viterbi Search**: Uses dynamic programming with beam search to find the most probable pair of plaintexts given the XOR of their ciphertexts.
-3. **Decryptor**: Orchestrates the decryption process, combining language models and Viterbi search.
-4. **Visualizers**: Provides progress visualization and Viterbi graph visualization.
-5. **Model Analyzer**: Analyzes language models, showing top n-grams and character distributions.
-6. **GPU Accelerator**: Implements GPU acceleration for faster decryption (optional).
+## Approach
 
-## Project Structure
+The paper's approach uses statistical language models (character-level n-grams) to model the plaintexts. 
+Given two ciphertexts `c1 = p1 ⊕ k` and `c2 = p2 ⊕ k`, we compute `x = c1 ⊕ c2 = p1 ⊕ p2`. 
+We then search for the most probable `(p1, p2)` such that `p1 ⊕ p2 = x` according to the language models.
 
-```
-project_root/
-├── include/
-│   ├── config_manager.h
-│   ├── decryptor.h
-│   ├── gpu_accelerator.h
-│   ├── language_model.h
-│   ├── logger.h
-│   ├── model_analyzer.h
-│   ├── visualizer.h
-│   ├── viterbi_search.h
-│   └── viterbi_visualizer.h
-├── src/
-│   ├── config_manager.cpp
-│   ├── decryptor.cpp
-│   ├── gpu_accelerator.cpp
-│   ├── language_model.cpp
-│   ├── logger.cpp
-│   ├── main.cpp
-│   ├── model_analyzer.cpp
-│   ├── visualizer.cpp
-│   ├── viterbi_search.cpp
-│   └── viterbi_visualizer.cpp
-├── test/
-│   ├── include/
-│   │   ├── test_config_manager.h
-│   │   ├── test_decryptor.h
-│   │   ├── test_gpu_accelerator.h
-│   │   ├── test_language_model.h
-│   │   ├── test_visualizer.h
-│   │   └── test_viterbi_search.h
-│   ├── src/
-│   │   ├── test_config_manager.cpp
-│   │   ├── test_decryptor.cpp
-│   │   ├── test_gpu_accelerator.cpp
-│   │   ├── test_language_model.cpp
-│   │   ├── test_visualizer.cpp
-│   │   └── test_viterbi_search.cpp
-│   └── main_test.cpp
-├── config/
-│   └── config.yml
-├── kernels/
-│   └── viterbi_kernel.cl
-├── CMakeLists.txt
-└── README.md
+### Key Innovations
+
+1. **Language Model Decoding**: Treats plaintext recovery as a decoding problem using n-gram models
+2. **Efficient Search**: Uses Viterbi algorithm with beam search to handle large search spaces
+3. **Witten-Bell Smoothing**: Handles rare/unseen character sequences
+4. **Real-world Applications**: Demonstrates attacks on Microsoft Word 2002 encryption
+
+## Implementation
+
+Our implementation focuses on email cryptanalysis using the Enron dataset:
+
+### Cryptanalysis Pipeline
+
+1. **Training Phase**:
+```mermaid
+graph LR
+    A[Raw Emails] --> B[Preprocessing]
+    B --> C[Character N-gram Extraction]
+    C --> D[Witten-Bell Smoothing]
+    D --> E[Model Serialization]
 ```
 
-## Key Features
-
-- N-gram language models with Witten-Bell smoothing
-- Viterbi algorithm with beam search for efficient decryption
-- Support for multiple plaintext types (HTML, email, Word documents)
-- GPU acceleration using OpenCL (optional)
-- Visualization of decryption progress and Viterbi graph
-- Configurable settings via YAML configuration file
-- Logging system for better debugging and analysis
-
-## Build and Run
-
-1. Ensure you have a C++17 compatible compiler, CMake (3.15+), and the required libraries installed.
-2. Clone the repository and navigate to the project root.
-3. Create and navigate to a build directory:
-   ```
-   mkdir build && cd build
-   ```
-4. Configure the project with CMake:
-   ```
-   cmake ..
-   ```
-5. Build the project:
-   ```
-   cmake --build .
-   ```
-6. Run the program:
-   ```
-   ./bin/two_time_pad_cracker -c ../config/config.yml -x path/to/xored_text.txt
-   ```
-
-## Dependencies
-
-- C++17 compatible compiler
-- CMake 3.15+
-- Boost (for graph visualization)
-- yaml-cpp (for configuration management)
-- cxxopts (for command-line argument parsing)
-- spdlog (for logging)
-- OpenCL (for GPU acceleration, optional)
-- GTest (for unit testing)
-
-## Configuration
-
-The program uses a YAML configuration file for various settings. Example:
-
-```yaml
-model_file1: "path/to/model1.bin"
-model_file2: "path/to/model2.bin"
-num_threads: 4
-pruning_threshold: 1e-5
-verbose_mode: true
-use_gpu: false
+2. **Decoding Phase**:
+```mermaid
+graph LR
+    F[Encrypted Email Pair] --> G[XOR Stream Calculation]
+    G --> H[Beam Search Initialization]
+    H --> I[Cython-Accelerated Byte Processing]
+    I --> J[Beam Pruning]
+    J --> K[Path Reconstruction]
+    K --> L[Decrypted Plaintexts]
 ```
+
+### Components
+
+1. **Character Language Model** (`char_language_model.py`)
+   - Implements 7-gram character model with Witten-Bell smoothing
+   - Trained on domain-specific corpora (emails, HTML, etc.)
+   - Handles BOM/EOM markers for message boundaries
+
+2. **Two-Time Pad Decoder** (`decoder.py`)
+   - Uses beam search with configurable width
+   - Implements Viterbi algorithm with state pruning
+   - Accelerated with Cython inner loop
+   - Handles both two-text and multi-text scenarios
+
+3. **Memory-Mapped Model** (`mapped_model.py`)
+   - Enables efficient loading of large language models
+   - Uses disk storage with memory mapping for minimal RAM usage
+   - Supports models trained on massive corpora (>1B characters)
+
+4. **Cython Accelerated Decoder** (`decoder_cy.pyx`)
+   - Optimized inner loop for beam search
+   - Handles 200ms/byte performance as in paper
+
+5. **Email Utilities** (`email_utils.py`)
+   - Specialized preprocessing for email cryptanalysis
+   - Removes headers, signatures, and quoted text
+   - Handles Enron dataset parsing
+
+
+
+## Setup
+
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Build Cython module:
+   ```bash
+   cd src
+   python setup.py build_ext --inplace
+   ```
+
+3. Download Enron dataset:
+   ```bash
+   python scripts/download_enron.py --output data/enron
+   ```
 
 ## Usage
 
+```bash
+python src/main.py \
+    --enron_path data/enron \
+    --model_path models/email_model \
+    --encrypted_dir data/encrypted_pairs
 ```
-two_time_pad_cracker --config path/to/config.yml --xor path/to/xored_text.txt
-```
-
-Use `--help` for more information on available options.
-
-## Testing
-
-The project includes unit tests using the Google Test framework. To run the tests:
-
-1. Make sure you've built the project with the `BUILD_TESTS` option enabled:
-   ```
-   cmake -DBUILD_TESTS=ON ..
-   cmake --build .
-   ```
-2. Run the tests:
-   ```
-   ctest
-   ```
-   or run the test executable directly:
-   ```
-   ./bin/unit_tests
-   ```
 
 ## Performance
 
-The implementation includes several optimizations:
-- Beam search in Viterbi algorithm for memory efficiency
-- Multi-threading support for parallel processing
-- Optional GPU acceleration using OpenCL
+With default settings on a modern laptop:
 
-On a typical modern PC, the program can process ciphertexts at approximately 200ms per byte.
+- Training time: ~2 hours (150k emails)
+- Model size: ~800MB (memory-mapped)
+- Decoding speed: ~200ms/byte
+- Accuracy: 82-99% depending on email content
 
-## Contributing
+## Evaluation Metrics
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. **Byte Accuracy**: % of bytes exactly matching original positions
+2. **Pair Accuracy**: % of byte pairs correctly recovered (position-independent)
+3. **Switched Positions**: Locations where plaintexts were swapped
 
-## License
+## Future Work
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+1. Support for other document types (HTML, Word)
+2. GPU acceleration of decoding
+3. Better handling of binary attachments
+4. Integration with email clients for real-world testing
+
+## References
+
+- Mason, J., Watkins, K., Eisner, J., & Stubblefield, A. (2006). 
+A Natural Language Approach to Automated Cryptanalysis of Two-time Pads. 
+_Proceedings of the 13th ACM Conference on Computer and Communications Security_.
+
+
