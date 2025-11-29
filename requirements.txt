@@ -1,8 +1,12 @@
-cython
-numpy
+cython~=3.1.1
+numpy~=2.2.3
 scipy
 scikit-learn
 nltk
 spacy
-python-enron
-tqdm
+tqdm~=4.67.1
+setuptools~=80.9.0
+bs4~=0.0.2
+beautifulsoup4~=4.13.4
+requests~=2.32.3
+html2text~=2025.4.15
