@@ -1,71 +1,138 @@
-from src.model.char_language_model import BOM
+# src/decoder/two_time_pad_decoder.py
+from typing import Tuple, List, Dict, Any
+import math
+import logging
+from collections import defaultdict
+from src.model.char_language_model import BOM, EOM
+
+logger = logging.getLogger(__name__)
+
+
+class BeamState:
+    """Represents a state in the beam search."""
+    __slots__ = ['ctx1', 'ctx2', 'log_prob', 'p1_path', 'p2_path', 'step']
+
+    def __init__(self, ctx1: bytes, ctx2: bytes, log_prob: float,
+                 p1_path: bytearray, p2_path: bytearray, step: int = 0):
+        self.ctx1 = ctx1  # Last n-1 bytes of plaintext1
+        self.ctx2 = ctx2  # Last n-1 bytes of plaintext2
+        self.log_prob = log_prob
+        self.p1_path = p1_path
+        self.p2_path = p2_path
+        self.step = step  # Current position
 
 
 class TwoTimePadDecoder:
-    def __init__(self, model1, model2, beam_width=100):
+    def __init__(self, model1, model2, beam_width: int = 100, n: int = 7):
         self.model1 = model1
         self.model2 = model2
         self.beam_width = beam_width
-        self.context_mask = (1 << 48) - 1  # 6-byte mask
+        self.context_length = n - 1
+        self.n = n
 
-    def decode(self, xor_stream):
-        # Initialize with BOM context
-        context0 = int.from_bytes(BOM * 6, "big")
-        beam = [{
-            'ctx1': context0,
-            'ctx2': context0,
-            'log_prob': 0.0,
-            'path': bytearray(),
-            'back_ptr': None  # For path reconstruction
-        }]
+    def decode(self, xor_stream: List[int]) -> Tuple[bytes, bytes]:
+        # Start with BOM contexts as in the paper
+        initial_ctx1 = bytes([BOM] * self.context_length)
+        initial_ctx2 = bytes([BOM] * self.context_length)
 
-        # Store beam history for reconstruction
-        beam_history = []
+        initial_state = BeamState(
+            ctx1=initial_ctx1,
+            ctx2=initial_ctx2,
+            log_prob=0.0,
+            p1_path=bytearray(),
+            p2_path=bytearray(),
+            step=0
+        )
 
-        for xor_byte in xor_stream:
-            new_beam = []
+        beam = [initial_state]
+
+        for i, xor_byte in enumerate(xor_stream):
+            candidates = []
+
             for state in beam:
-                for p1 in range(256):
-                    p2 = p1 ^ xor_byte
+                # Try plausible byte pairs first (printable ASCII)
+                for p1_byte in range(32, 127):  # Printable ASCII
+                    p2_byte = p1_byte ^ xor_byte
 
-                    # Get probabilities
-                    ctx1_bytes = state['ctx1'].to_bytes(6, 'big')
-                    ctx2_bytes = state['ctx2'].to_bytes(6, 'big')
-                    log_prob1 = self.model1.log_prob(p1, ctx1_bytes)
-                    log_prob2 = self.model2.log_prob(p2, ctx2_bytes)
+                    # If p2 is also printable, it's more likely
+                    if 32 <= p2_byte <= 126:
+                        lp1 = self.model1.log_prob(p1_byte, state.ctx1)
+                        lp2 = self.model2.log_prob(p2_byte, state.ctx2)
 
-                    # Skip impossible combinations
-                    if log_prob1 < -20 or log_prob2 < -20:
-                        continue
+                        if lp1 > -50 and lp2 > -50:  # Less strict threshold
+                            new_log_prob = state.log_prob + lp1 + lp2
 
-                    # Create new state
-                    new_ctx1 = ((state['ctx1'] << 8) | p1) & self.context_mask
-                    new_ctx2 = ((state['ctx2'] << 8) | p2) & self.context_mask
-                    new_log_prob = state['log_prob'] + log_prob1 + log_prob2
+                            # Update contexts properly
+                            new_ctx1 = (state.ctx1 + bytes([p1_byte]))[-self.context_length:]
+                            new_ctx2 = (state.ctx2 + bytes([p2_byte]))[-self.context_length:]
 
-                    new_beam.append({
-                        'ctx1': new_ctx1,
-                        'ctx2': new_ctx2,
-                        'log_prob': new_log_prob,
-                        'path': state['path'] + bytes([p1, p2]),
-                        'back_ptr': state
-                    })
+                            new_p1_path = state.p1_path.copy()
+                            new_p2_path = state.p2_path.copy()
+                            new_p1_path.append(p1_byte)
+                            new_p2_path.append(p2_byte)
 
-            # Prune beam
-            new_beam.sort(key=lambda x: x['log_prob'], reverse=True)
-            beam = new_beam[:self.beam_width]
-            beam_history.append(beam)
+                            candidates.append(BeamState(
+                                ctx1=new_ctx1,
+                                ctx2=new_ctx2,
+                                log_prob=new_log_prob,
+                                p1_path=new_p1_path,
+                                p2_path=new_p2_path,
+                                step=i + 1
+                            ))
 
-        # Reconstruct best path
-        best_state = max(beam, key=lambda x: x['log_prob'])
-        p1 = bytearray()
-        p2 = bytearray()
+            # If no printable candidates, fall back to all bytes
+            if not candidates:
+                for state in beam:
+                    for p1_byte in range(256):
+                        p2_byte = p1_byte ^ xor_byte
 
-        state = best_state
-        while state['back_ptr']:
-            path = state['path'][-2:]  # Last two bytes
-            p1.append(path[0])
-            p2.append(path[1])
-            state = state['back_ptr']
+                        lp1 = self.model1.log_prob(p1_byte, state.ctx1)
+                        lp2 = self.model2.log_prob(p2_byte, state.ctx2)
 
-        return bytes(p1)[::-1], bytes(p2)[::-1]  # Reverse to original order
+                        new_log_prob = state.log_prob + lp1 + lp2
+
+                        new_ctx1 = (state.ctx1 + bytes([p1_byte]))[-self.context_length:]
+                        new_ctx2 = (state.ctx2 + bytes([p2_byte]))[-self.context_length:]
+
+                        new_p1_path = state.p1_path.copy()
+                        new_p2_path = state.p2_path.copy()
+                        new_p1_path.append(p1_byte)
+                        new_p2_path.append(p2_byte)
+
+                        candidates.append(BeamState(
+                            ctx1=new_ctx1,
+                            ctx2=new_ctx2,
+                            log_prob=new_log_prob,
+                            p1_path=new_p1_path,
+                            p2_path=new_p2_path,
+                            step=i + 1
+                        ))
+
+            # Group by context and keep best per context
+            context_best = {}
+            for cand in candidates:
+                key = (cand.ctx1, cand.ctx2)
+                if key not in context_best or cand.log_prob > context_best[key].log_prob:
+                    context_best[key] = cand
+
+            # Take top-k by probability
+            beam = sorted(context_best.values(),
+                          key=lambda s: s.log_prob,
+                          reverse=True)[:self.beam_width]
+
+            if not beam:
+                # Emergency fallback
+                p1_byte = 32  # space
+                p2_byte = p1_byte ^ xor_byte
+                beam = [BeamState(
+                    ctx1=bytes([BOM] * self.context_length),
+                    ctx2=bytes([BOM] * self.context_length),
+                    log_prob=-1000.0,
+                    p1_path=bytearray([p1_byte]),
+                    p2_path=bytearray([p2_byte]),
+                    step=i + 1
+                )]
+
+        # Return best candidate
+        best = max(beam, key=lambda s: s.log_prob)
+        return bytes(best.p1_path), bytes(best.p2_path)

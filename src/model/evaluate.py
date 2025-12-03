@@ -1,31 +1,48 @@
-# evaluate.py
 import numpy as np
 from collections import Counter
 
 
 def evaluate_recovery(original1, original2, recovered1, recovered2):
     """Enhanced evaluation with more metrics"""
-    # Convert to byte arrays
-    orig1 = np.frombuffer(original1, dtype=np.uint8)
-    orig2 = np.frombuffer(original2, dtype=np.uint8)
-    rec1 = np.frombuffer(recovered1, dtype=np.uint8)
-    rec2 = np.frombuffer(recovered2, dtype=np.uint8)
+    # Handle empty inputs
+    if len(original1) == 0 and len(original2) == 0:
+        return {
+            "byte_accuracy": 0.0,
+            "pair_accuracy": 0.0,
+            "printable_accuracy_1": 0.0,
+            "printable_accuracy_2": 0.0,
+            "word_accuracy_1": 0.0,
+            "word_accuracy_2": 0.0,
+            "switched_positions": [],
+            "total_switches": 0,
+            "switch_rate": 0.0
+        }
 
-    # Basic accuracy metrics
-    correct_bytes = np.sum((orig1 == rec1) & (orig2 == rec2))
-    byte_acc = correct_bytes / len(orig1)
+    # Convert to byte arrays, using minimum length to avoid shape mismatches
+    min_len = min(len(original1), len(original2), len(recovered1), len(recovered2))
 
-    # Pair-wise accuracy
+    orig1 = np.frombuffer(original1[:min_len], dtype=np.uint8)
+    orig2 = np.frombuffer(original2[:min_len], dtype=np.uint8)
+    rec1 = np.frombuffer(recovered1[:min_len], dtype=np.uint8)
+    rec2 = np.frombuffer(recovered2[:min_len], dtype=np.uint8)
+
+    # FIXED: Byte accuracy - count ALL correct bytes independently
+    correct_bytes_1 = np.sum(orig1 == rec1)
+    correct_bytes_2 = np.sum(orig2 == rec2)
+    total_bytes = len(orig1) + len(orig2)
+    byte_accuracy = (correct_bytes_1 + correct_bytes_2) / total_bytes if total_bytes > 0 else 0.0
+
+    # Pair-wise accuracy (both correct OR switched)
     correct_pairs = 0
     switched_positions = []
-    for i in range(len(orig1)):
+    for i in range(min_len):
         if (orig1[i] == rec1[i] and orig2[i] == rec2[i]):
             correct_pairs += 1
         elif (orig1[i] == rec2[i] and orig2[i] == rec1[i]):
             correct_pairs += 1
             switched_positions.append(i)
 
-    pair_acc = correct_pairs / len(orig1)
+    pair_accuracy = correct_pairs / min_len if min_len > 0 else 0.0
 
     # Character-level accuracy (printable ASCII)
     printable_chars1 = np.sum((orig1 >= 32) & (orig1 <= 126))
@@ -56,13 +73,13 @@ def evaluate_recovery(original1, original2, recovered1, recovered2):
     word_acc2 = word_correct2 / min_words2 if min_words2 > 0 else 0
 
     return {
-        "byte_accuracy": byte_acc,
-        "pair_accuracy": pair_acc,
+        "byte_accuracy": byte_accuracy,
+        "pair_accuracy": pair_accuracy,
         "printable_accuracy_1": printable_acc1,
         "printable_accuracy_2": printable_acc2,
         "word_accuracy_1": word_acc1,
         "word_accuracy_2": word_acc2,
         "switched_positions": switched_positions,
         "total_switches": len(switched_positions),
-        "switch_rate": len(switched_positions) / len(orig1) if len(orig1) > 0 else 0
+        "switch_rate": len(switched_positions) / min_len if min_len > 0 else 0
     }
