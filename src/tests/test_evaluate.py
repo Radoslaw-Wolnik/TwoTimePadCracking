@@ -1,4 +1,3 @@
-import numpy as np
 from src.model.evaluate import evaluate_recovery
 
 def test_evaluate_recovery_perfect_match():

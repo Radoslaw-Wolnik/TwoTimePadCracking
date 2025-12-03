@@ -1,8 +1,6 @@
 # src/decoder/two_time_pad_decoder.py
 from typing import Tuple, List, Dict, Any
-import math
 import logging
-from collections import defaultdict
 from src.model.char_language_model import BOM, EOM
 
 logger = logging.getLogger(__name__)

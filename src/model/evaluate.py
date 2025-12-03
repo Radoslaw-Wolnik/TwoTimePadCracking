@@ -1,5 +1,4 @@
 import numpy as np
-from collections import Counter
 
 
 def evaluate_recovery(original1, original2, recovered1, recovered2):

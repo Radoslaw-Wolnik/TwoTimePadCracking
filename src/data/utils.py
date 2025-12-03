@@ -1,6 +1,4 @@
 from pathlib import Path
-import tarfile
-import shutil
 import logging
 from typing import Iterable
 import requests

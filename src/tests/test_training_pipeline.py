@@ -1,6 +1,5 @@
 import pytest
-import numpy as np  # ADD THIS IMPORT
-from pathlib import Path
+import numpy as np
 from src.model.char_language_model import CharLanguageModel
 
 

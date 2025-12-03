@@ -1,6 +1,5 @@
 import math
 import pytest
-from pathlib import Path
 from src.model.char_language_model import CharLanguageModel
 
 

@@ -1,19 +1,18 @@
 # conftest.py
-import pytest
 from pathlib import Path
 import sys
+import pytest
 
 # Add src to path so we can import our modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.model.char_language_model import CharLanguageModel
-import numpy as np
 
 # -------------------------
 # CLI options & marker setup
 # -------------------------
 # conftest.py
-import pytest
+
 
 def pytest_addoption(parser):
     parser.addoption(

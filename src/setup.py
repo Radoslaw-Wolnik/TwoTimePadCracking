@@ -11,6 +11,8 @@ setup(
         "beautifulsoup4>=4.9.3",
         "tqdm>=4.60.0",
         "numpy>=1.20.0",
+        "matplotlib>=3.7",
+        "pytest>=7.2",
     ],
     python_requires=">=3.8",
     author="Radoslaw Wolnik",
