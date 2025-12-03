@@ -31,5 +31,15 @@
 *.out
 *.app
 
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
 # Directories
-res/
+res/10k_processed_emails
+res/20k_processed_emails
+res/enron_emails_raw
+res/processed_emails
+
+src/tests/data/10k_processed_emails
