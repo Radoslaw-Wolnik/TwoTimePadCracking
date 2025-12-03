@@ -1,0 +1,47 @@
+TWO-TIME PAD ANALYSIS RESULTS
+==================================================
+
+CONFIGURATION:
+  Model n-gram size: 7
+  Beam width: 100
+  Number of runs: 5
+  Tests per run: 50
+  Total emails used: 6250
+
+OVERALL RESULTS:
+  Average Pair Accuracy: 75.17%
+  Std Dev Pair Accuracy: 0.0330
+  Average Byte Accuracy: 36.86%
+  Average Success Rate: 64.40%
+
+DETAILED RUN RESULTS:
+  Run 1:
+    Pair Accuracy: 70.42%
+    Byte Accuracy: 42.48%
+    Success Rate: 60.00%
+    Tests run: 50
+
+  Run 2:
+    Pair Accuracy: 72.64%
+    Byte Accuracy: 37.95%
+    Success Rate: 56.00%
+    Tests run: 50
+
+  Run 3:
+    Pair Accuracy: 75.41%
+    Byte Accuracy: 32.76%
+    Success Rate: 64.00%
+    Tests run: 50
+
+  Run 4:
+    Pair Accuracy: 79.23%
+    Byte Accuracy: 37.05%
+    Success Rate: 76.00%
+    Tests run: 50
+
+  Run 5:
+    Pair Accuracy: 78.15%
+    Byte Accuracy: 34.05%
+    Success Rate: 66.00%
+    Tests run: 50
+
