@@ -1,12 +1,12 @@
 # Automated Cryptanalysis of Two-Time Pads
 
-## 📖 Overview
+## Overview
 
 This project implements the complete cryptanalysis system from the 2006 paper [**"A Natural Language Approach to Automated Cryptanalysis of Two-time Pads"**](https://www.cs.jhu.edu/~jason/papers/mason+al.ccs06.pdf) by Mason, Watkins, Eisner, and Stubblefield. 
 
 The system demonstrates a practical attack on **keystream reuse vulnerabilities**, automatically recovering plaintexts from two ciphertexts encrypted with the same keystream when only their document types are known (e.g., English emails, HTML pages, Word documents).
 
-## 🔬 Core Cryptographic Problem
+## Core Cryptographic Problem
 
 ### The Two-Time Pad Vulnerability
 When a keystream `k` is reused to encrypt two plaintexts `p` and `q`, an attacker can compute:
@@ -171,7 +171,7 @@ def decode(self, xor_stream: List[int]) -> Tuple[bytes, bytes]:
 
 **Performance**: ~200ms per byte, matching the paper's results on a $2,000 PC.
 
-## 📊 Experimental Results
+## Experimental Results
 
 We conducted extensive experiments following the paper's methodology, training models on Enron emails of varying sizes and evaluating recovery accuracy.
 
