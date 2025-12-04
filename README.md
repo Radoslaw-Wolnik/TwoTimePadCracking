@@ -260,10 +260,6 @@ def detect_and_fix_switches(rec1, rec2, model1, model2):
 git clone https://github.com/Radoslaw-Wolnik/TwoTimePadCracking.git
 cd two-time-pad-decrypt
 pip install -r requirements.txt
-
-# Build Cython extensions (optional, for performance)
-cd src
-python setup.py build_ext --inplace
 ```
 
 ### Basic Usage
